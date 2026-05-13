@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hamkad Hospital – Patient Queue</title>
+  <!-- QR code library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     /* ── Reset & base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -147,11 +149,12 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(10,30,50,.55);
+      background: rgba(10,30,50,.6);
       z-index: 100;
       align-items: center;
       justify-content: center;
       padding: 16px;
+      overflow-y: auto;
     }
 
     #ticket-overlay.show { display: flex; }
@@ -159,68 +162,137 @@
     .ticket-box {
       background: #fff;
       border-radius: 16px;
-      padding: 36px 40px;
-      max-width: 380px;
+      padding: 0;
+      max-width: 420px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 8px 40px rgba(0,0,0,.25);
+      box-shadow: 0 12px 48px rgba(0,0,0,.3);
       animation: popIn .25s ease;
+      overflow: hidden;
+      margin: auto;
     }
 
     @keyframes popIn {
-      from { transform: scale(.85); opacity: 0; }
+      from { transform: scale(.88); opacity: 0; }
       to   { transform: scale(1);   opacity: 1; }
     }
 
-    .ticket-box .dept-badge {
+    /* Coloured top band */
+    .ticket-header {
+      background: linear-gradient(135deg, #0a5c8a 0%, #0d7abf 100%);
+      padding: 22px 32px 18px;
+      color: #fff;
+    }
+
+    .ticket-header .dept-badge {
       display: inline-block;
-      background: #e8f4fd;
-      color: #0a5c8a;
-      font-size: .78rem;
+      background: rgba(255,255,255,.2);
+      color: #fff;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      padding: 3px 12px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+
+    .ticket-header .ticket-number {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      line-height: 1;
+      color: #fff;
+    }
+
+    /* Body section */
+    .ticket-body {
+      padding: 22px 32px 28px;
+    }
+
+    .ticket-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 16px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .ticket-meta .meta-item {
+      background: #f7fafc;
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+
+    .ticket-meta .meta-label {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: #a0aec0;
+      margin-bottom: 3px;
+    }
+
+    .ticket-meta .meta-value {
+      font-size: .92rem;
+      font-weight: 600;
+      color: #2d3748;
+      word-break: break-word;
+    }
+
+    .ticket-meta .meta-item.position .meta-value {
+      color: #0d7abf;
+      font-size: 1.1rem;
+    }
+
+    /* QR section */
+    .qr-section {
+      margin-bottom: 22px;
+    }
+
+    .qr-label {
+      font-size: .72rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .08em;
-      padding: 4px 12px;
-      border-radius: 20px;
-      margin-bottom: 14px;
+      color: #a0aec0;
+      margin-bottom: 10px;
     }
 
-    .ticket-box .ticket-number {
-      font-size: 3.2rem;
-      font-weight: 800;
-      color: #0a5c8a;
-      letter-spacing: .06em;
-      line-height: 1;
-      margin-bottom: 8px;
+    .qr-frame {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
     }
 
-    .ticket-box .patient-name {
-      font-size: 1rem;
-      color: #4a5568;
-      margin-bottom: 6px;
+    /* qrcode.js renders a canvas or img inside #qr-canvas */
+    #qr-canvas canvas,
+    #qr-canvas img {
+      display: block;
+      border-radius: 4px;
     }
-
-    .ticket-box .wait-info {
-      font-size: .85rem;
-      color: #718096;
-      margin-bottom: 24px;
-    }
-
-    .ticket-box .wait-info strong { color: #0d7abf; }
 
     .btn-close {
-      padding: 10px 32px;
-      background: #0a5c8a;
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #0a5c8a, #0d7abf);
       color: #fff;
       border: none;
       border-radius: 8px;
       font-size: .95rem;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      transition: background .2s;
+      letter-spacing: .03em;
+      transition: opacity .2s, transform .1s;
     }
 
-    .btn-close:hover { background: #0d7abf; }
+    .btn-close:hover  { opacity: .9; }
+    .btn-close:active { transform: scale(.98); }
 
     /* ── Department status grid ── */
     .dept-grid {
@@ -484,13 +556,48 @@
 </footer>
 
 <!-- ── Ticket overlay ── -->
-<div id="ticket-overlay" role="dialog" aria-modal="true" aria-labelledby="ticket-title">
+<div id="ticket-overlay" role="dialog" aria-modal="true" aria-labelledby="ticket-number">
   <div class="ticket-box">
-    <div class="dept-badge" id="ticket-dept-label"></div>
-    <div class="ticket-number" id="ticket-number" aria-live="polite"></div>
-    <div class="patient-name" id="ticket-patient"></div>
-    <div class="wait-info" id="ticket-wait"></div>
-    <button class="btn-close" id="btn-close-ticket">Done</button>
+
+    <!-- Coloured header band -->
+    <div class="ticket-header">
+      <div class="dept-badge" id="ticket-dept-label"></div>
+      <div class="ticket-number" id="ticket-number" aria-live="polite"></div>
+    </div>
+
+    <!-- Body -->
+    <div class="ticket-body">
+
+      <!-- Meta grid: name / dept / time / position -->
+      <div class="ticket-meta">
+        <div class="meta-item" style="grid-column: 1 / -1;">
+          <div class="meta-label">Patient Name</div>
+          <div class="meta-value" id="ticket-patient"></div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Department</div>
+          <div class="meta-value" id="ticket-dept-name"></div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Registered At</div>
+          <div class="meta-value" id="ticket-time"></div>
+        </div>
+        <div class="meta-item position" style="grid-column: 1 / -1;">
+          <div class="meta-label">Queue Position</div>
+          <div class="meta-value" id="ticket-position"></div>
+        </div>
+      </div>
+
+      <!-- QR code -->
+      <div class="qr-section">
+        <div class="qr-label">Scan to view your ticket</div>
+        <div class="qr-frame">
+          <div id="qr-canvas"></div>
+        </div>
+      </div>
+
+      <button class="btn-close" id="btn-close-ticket">Close</button>
+    </div>
   </div>
 </div>
 
@@ -625,11 +732,31 @@
 
     // Populate and show ticket overlay
     var d = DEPARTMENTS[dept];
+    var now = new Date();
+
     document.getElementById('ticket-dept-label').textContent = d.label;
     document.getElementById('ticket-number').textContent     = ticketNumber;
-    document.getElementById('ticket-patient').textContent    = 'Hello, ' + name + '!';
-    document.getElementById('ticket-wait').innerHTML =
-      'You are <strong>#' + position + '</strong> in the ' + d.label + ' queue.';
+    document.getElementById('ticket-patient').textContent    = name;
+    document.getElementById('ticket-dept-name').textContent  = d.label;
+    document.getElementById('ticket-time').textContent       = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('ticket-position').textContent   = '#' + position + ' in queue';
+
+    // Build QR code URL
+    var qrUrl = 'https://aharkeem.github.io/hamkad-queue/' +
+      '?ticket=' + encodeURIComponent(ticketNumber) +
+      '&name='   + encodeURIComponent(name);
+
+    // Clear previous QR and generate new one
+    var qrContainer = document.getElementById('qr-canvas');
+    qrContainer.innerHTML = '';
+    new QRCode(qrContainer, {
+      text:         qrUrl,
+      width:        160,
+      height:       160,
+      colorDark:    '#0a5c8a',
+      colorLight:   '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
 
     document.getElementById('ticket-overlay').classList.add('show');
 
@@ -654,6 +781,7 @@
 
   function closeOverlay() {
     document.getElementById('ticket-overlay').classList.remove('show');
+    document.getElementById('qr-canvas').innerHTML = '';
     document.getElementById('patient-name').focus();
   }
 
