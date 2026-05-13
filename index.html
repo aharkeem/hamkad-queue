@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hamkad Hospital – Patient Queue</title>
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f8;
+      color: #1a2b3c;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #0a5c8a 0%, #0d7abf 100%);
+      color: #fff;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+
+    header .logo {
+      width: 52px;
+      height: 52px;
+      background: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    header .logo svg { width: 32px; height: 32px; }
+
+    header h1 { font-size: 1.4rem; font-weight: 700; line-height: 1.2; }
+    header p  { font-size: .85rem; opacity: .85; margin-top: 2px; }
+
+    /* ── Layout ── */
+    main {
+      max-width: 960px;
+      margin: 32px auto;
+      padding: 0 16px;
+      display: grid;
+      gap: 28px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      padding: 28px 32px;
+    }
+
+    .card h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0a5c8a;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Form ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 560px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .card { padding: 20px 18px; }
+    }
+
+    label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: .95rem;
+      color: #1a2b3c;
+      background: #f7fafc;
+      transition: border-color .2s, box-shadow .2s;
+      appearance: none;
+    }
+
+    input[type="text"]:focus, select:focus {
+      outline: none;
+      border-color: #0d7abf;
+      box-shadow: 0 0 0 3px rgba(13,122,191,.15);
+      background: #fff;
+    }
+
+    .select-wrapper {
+      position: relative;
+    }
+
+    .select-wrapper::after {
+      content: '\25BE';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: #718096;
+      font-size: .9rem;
+    }
+
+    .btn-register {
+      grid-column: 1 / -1;
+      padding: 13px;
+      background: linear-gradient(135deg, #0a5c8a, #0d7abf);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: .03em;
+      transition: opacity .2s, transform .1s;
+    }
+
+    .btn-register:hover  { opacity: .9; }
+    .btn-register:active { transform: scale(.98); }
+
+    /* ── Ticket modal overlay ── */
+    #ticket-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,30,50,.55);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    #ticket-overlay.show { display: flex; }
+
+    .ticket-box {
+      background: #fff;
+      border-radius: 16px;
+      padding: 36px 40px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 40px rgba(0,0,0,.25);
+      animation: popIn .25s ease;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(.85); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .ticket-box .dept-badge {
+      display: inline-block;
+      background: #e8f4fd;
+      color: #0a5c8a;
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+
+    .ticket-box .ticket-number {
+      font-size: 3.2rem;
+      font-weight: 800;
+      color: #0a5c8a;
+      letter-spacing: .06em;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .ticket-box .patient-name {
+      font-size: 1rem;
+      color: #4a5568;
+      margin-bottom: 6px;
+    }
+
+    .ticket-box .wait-info {
+      font-size: .85rem;
+      color: #718096;
+      margin-bottom: 24px;
+    }
+
+    .ticket-box .wait-info strong { color: #0d7abf; }
+
+    .btn-close {
+      padding: 10px 32px;
+      background: #0a5c8a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+
+    .btn-close:hover { background: #0d7abf; }
+
+    /* ── Department status grid ── */
+    .dept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+    }
+
+    .dept-card {
+      border-radius: 10px;
+      padding: 18px 20px;
+      border-left: 5px solid;
+      background: #f7fafc;
+    }
+
+    .dept-card.gc  { border-color: #3182ce; }
+    .dept-card.ped { border-color: #38a169; }
+    .dept-card.obg { border-color: #d53f8c; }
+    .dept-card.mdc { border-color: #805ad5; }
+
+    .dept-card .dept-name {
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #718096;
+      margin-bottom: 6px;
+    }
+
+    .dept-card .dept-count {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .dept-card.gc  .dept-count { color: #3182ce; }
+    .dept-card.ped .dept-count { color: #38a169; }
+    .dept-card.obg .dept-count { color: #d53f8c; }
+    .dept-card.mdc .dept-count { color: #805ad5; }
+
+    .dept-card .dept-label {
+      font-size: .8rem;
+      color: #a0aec0;
+      margin-top: 2px;
+    }
+
+    /* ── Queue list ── */
+    .queue-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .tab-btn {
+      padding: 7px 16px;
+      border-radius: 20px;
+      border: 1.5px solid #cbd5e0;
+      background: #fff;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #4a5568;
+      transition: all .15s;
+    }
+
+    .tab-btn.active, .tab-btn:hover {
+      background: #0a5c8a;
+      border-color: #0a5c8a;
+      color: #fff;
+    }
+
+    .queue-list {
+      display: none;
+    }
+
+    .queue-list.active { display: block; }
+
+    .queue-list table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+
+    .queue-list th {
+      text-align: left;
+      padding: 8px 12px;
+      background: #edf2f7;
+      color: #4a5568;
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .queue-list th:first-child { border-radius: 6px 0 0 6px; }
+    .queue-list th:last-child  { border-radius: 0 6px 6px 0; }
+
+    .queue-list td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf2f7;
+      color: #2d3748;
+    }
+
+    .queue-list tr:last-child td { border-bottom: none; }
+
+    .queue-list .ticket-cell {
+      font-weight: 700;
+      font-size: .95rem;
+    }
+
+    .queue-list.gc  .ticket-cell { color: #3182ce; }
+    .queue-list.ped .ticket-cell { color: #38a169; }
+    .queue-list.obg .ticket-cell { color: #d53f8c; }
+    .queue-list.mdc .ticket-cell { color: #805ad5; }
+
+    .empty-msg {
+      text-align: center;
+      color: #a0aec0;
+      padding: 24px 0;
+      font-size: .9rem;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: .78rem;
+      color: #a0aec0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="logo" aria-hidden="true">
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="13" y="4"  width="6" height="24" rx="2" fill="#0a5c8a"/>
+      <rect x="4"  y="13" width="24" height="6"  rx="2" fill="#0a5c8a"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Hamkad Hospital</h1>
+    <p>Patient Queue Management System</p>
+  </div>
+</header>
+
+<!-- ── Main ── -->
+<main>
+
+  <!-- Registration card -->
+  <section class="card" aria-labelledby="reg-heading">
+    <h2 id="reg-heading">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a5c8a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <line x1="19" y1="8" x2="19" y2="14"/>
+        <line x1="22" y1="11" x2="16" y2="11"/>
+      </svg>
+      Patient Registration
+    </h2>
+
+    <form id="reg-form" novalidate>
+      <div class="form-grid">
+        <div>
+          <label for="patient-name">Full Name</label>
+          <input
+            type="text"
+            id="patient-name"
+            placeholder="e.g. Juan dela Cruz"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <div>
+          <label for="department">Department</label>
+          <div class="select-wrapper">
+            <select id="department" required>
+              <option value="" disabled selected>Select a department&hellip;</option>
+              <option value="GC">General Consultation</option>
+              <option value="PED">Pediatric</option>
+              <option value="OBG">Obstetrics &amp; Gynecology</option>
+              <option value="MDC">Medical Director Consultation</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-register">Get Queue Ticket</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Department counters -->
+  <section class="card" aria-labelledby="status-heading">
+    <h2 id="status-heading">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a5c8a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+      </svg>
+      Department Status
+    </h2>
+
+    <div class="dept-grid">
+      <div class="dept-card gc">
+        <div class="dept-name">General Consultation</div>
+        <div class="dept-count" id="count-GC">0</div>
+        <div class="dept-label">patients in queue</div>
+      </div>
+      <div class="dept-card ped">
+        <div class="dept-name">Pediatric</div>
+        <div class="dept-count" id="count-PED">0</div>
+        <div class="dept-label">patients in queue</div>
+      </div>
+      <div class="dept-card obg">
+        <div class="dept-name">Obstetrics &amp; Gynecology</div>
+        <div class="dept-count" id="count-OBG">0</div>
+        <div class="dept-label">patients in queue</div>
+      </div>
+      <div class="dept-card mdc">
+        <div class="dept-name">Medical Director</div>
+        <div class="dept-count" id="count-MDC">0</div>
+        <div class="dept-label">patients in queue</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Queue list -->
+  <section class="card" aria-labelledby="queue-heading">
+    <h2 id="queue-heading">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a5c8a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="8" y1="6" x2="21" y2="6"/>
+        <line x1="8" y1="12" x2="21" y2="12"/>
+        <line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/>
+        <line x1="3" y1="12" x2="3.01" y2="12"/>
+        <line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+      Queue List
+    </h2>
+
+    <div class="queue-tabs" role="tablist" aria-label="Department queues">
+      <button class="tab-btn active" role="tab" aria-selected="true"  data-tab="GC"  aria-controls="list-GC">General</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" data-tab="PED" aria-controls="list-PED">Pediatric</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" data-tab="OBG" aria-controls="list-OBG">OB-GYN</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" data-tab="MDC" aria-controls="list-MDC">Med. Director</button>
+    </div>
+
+    <div id="list-GC"  class="queue-list gc  active" role="tabpanel"><p class="empty-msg">No patients registered yet.</p></div>
+    <div id="list-PED" class="queue-list ped"        role="tabpanel"><p class="empty-msg">No patients registered yet.</p></div>
+    <div id="list-OBG" class="queue-list obg"        role="tabpanel"><p class="empty-msg">No patients registered yet.</p></div>
+    <div id="list-MDC" class="queue-list mdc"        role="tabpanel"><p class="empty-msg">No patients registered yet.</p></div>
+  </section>
+
+</main>
+
+<footer>
+  &copy; 2026 Hamkad Hospital &mdash; Patient Queue Management System
+</footer>
+
+<!-- ── Ticket overlay ── -->
+<div id="ticket-overlay" role="dialog" aria-modal="true" aria-labelledby="ticket-title">
+  <div class="ticket-box">
+    <div class="dept-badge" id="ticket-dept-label"></div>
+    <div class="ticket-number" id="ticket-number" aria-live="polite"></div>
+    <div class="patient-name" id="ticket-patient"></div>
+    <div class="wait-info" id="ticket-wait"></div>
+    <button class="btn-close" id="btn-close-ticket">Done</button>
+  </div>
+</div>
+
+<script>
+  // ── Department config ─────────────────────────────────────────────────────
+  var DEPARTMENTS = {
+    GC:  { label: 'General Consultation',          prefix: 'GC'  },
+    PED: { label: 'Pediatric',                     prefix: 'PED' },
+    OBG: { label: 'Obstetrics & Gynecology',       prefix: 'OBG' },
+    MDC: { label: 'Medical Director Consultation', prefix: 'MDC' },
+  };
+
+  // ── State (persisted in localStorage) ────────────────────────────────────
+  function loadState() {
+    try {
+      var raw = localStorage.getItem('hamkad_queue');
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return {
+      counters: { GC: 0, PED: 0, OBG: 0, MDC: 0 },
+      queues:   { GC: [], PED: [], OBG: [], MDC: [] }
+    };
+  }
+
+  function saveState() {
+    try { localStorage.setItem('hamkad_queue', JSON.stringify(state)); } catch (e) {}
+  }
+
+  var state = loadState();
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function pad(n) {
+    var s = String(n);
+    while (s.length < 3) s = '0' + s;
+    return s;
+  }
+
+  function formatTime(iso) {
+    var d = new Date(iso);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function renderCounters() {
+    Object.keys(DEPARTMENTS).forEach(function(key) {
+      document.getElementById('count-' + key).textContent = state.counters[key];
+    });
+  }
+
+  function renderQueue(deptKey) {
+    var container = document.getElementById('list-' + deptKey);
+    var patients  = state.queues[deptKey];
+
+    if (patients.length === 0) {
+      container.innerHTML = '<p class="empty-msg">No patients registered yet.</p>';
+      return;
+    }
+
+    var rows = patients.map(function(p, i) {
+      return '<tr>' +
+        '<td class="ticket-cell">' + p.ticket + '</td>' +
+        '<td>' + escapeHtml(p.name) + '</td>' +
+        '<td>' + formatTime(p.time) + '</td>' +
+        '<td>#' + (i + 1) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    container.innerHTML =
+      '<table>' +
+        '<thead><tr>' +
+          '<th>Ticket</th>' +
+          '<th>Patient Name</th>' +
+          '<th>Registered At</th>' +
+          '<th>Position</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>';
+  }
+
+  function renderAll() {
+    renderCounters();
+    Object.keys(DEPARTMENTS).forEach(renderQueue);
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Registration ──────────────────────────────────────────────────────────
+  document.getElementById('reg-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    var nameInput = document.getElementById('patient-name');
+    var deptInput = document.getElementById('department');
+    var name = nameInput.value.trim();
+    var dept = deptInput.value;
+
+    // Validate name
+    if (!name) {
+      nameInput.focus();
+      nameInput.style.borderColor = '#e53e3e';
+      setTimeout(function() { nameInput.style.borderColor = ''; }, 1500);
+      return;
+    }
+
+    // Validate department
+    if (!dept) {
+      deptInput.focus();
+      deptInput.style.borderColor = '#e53e3e';
+      setTimeout(function() { deptInput.style.borderColor = ''; }, 1500);
+      return;
+    }
+
+    // Increment counter and build ticket number
+    state.counters[dept] += 1;
+    var ticketNumber = DEPARTMENTS[dept].prefix + '-' + pad(state.counters[dept]);
+    var position     = state.counters[dept];
+
+    // Add patient to queue
+    state.queues[dept].push({
+      ticket: ticketNumber,
+      name:   name,
+      time:   new Date().toISOString()
+    });
+
+    saveState();
+    renderAll();
+
+    // Populate and show ticket overlay
+    var d = DEPARTMENTS[dept];
+    document.getElementById('ticket-dept-label').textContent = d.label;
+    document.getElementById('ticket-number').textContent     = ticketNumber;
+    document.getElementById('ticket-patient').textContent    = 'Hello, ' + name + '!';
+    document.getElementById('ticket-wait').innerHTML =
+      'You are <strong>#' + position + '</strong> in the ' + d.label + ' queue.';
+
+    document.getElementById('ticket-overlay').classList.add('show');
+
+    // Reset form
+    nameInput.value = '';
+    deptInput.value = '';
+
+    // Switch to the registered department tab
+    switchTab(dept);
+  });
+
+  // ── Close ticket overlay ──────────────────────────────────────────────────
+  document.getElementById('btn-close-ticket').addEventListener('click', closeOverlay);
+
+  document.getElementById('ticket-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeOverlay();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeOverlay();
+  });
+
+  function closeOverlay() {
+    document.getElementById('ticket-overlay').classList.remove('show');
+    document.getElementById('patient-name').focus();
+  }
+
+  // ── Tab switching ─────────────────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { switchTab(btn.dataset.tab); });
+  });
+
+  function switchTab(deptKey) {
+    document.querySelectorAll('.tab-btn').forEach(function(b) {
+      var active = b.dataset.tab === deptKey;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', String(active));
+    });
+    document.querySelectorAll('.queue-list').forEach(function(l) {
+      l.classList.toggle('active', l.id === 'list-' + deptKey);
+    });
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  renderAll();
+</script>
+</body>
+</html>
